@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fahrzeugangebot – Anmeldung – Autohaus Stieber</title>
+<style>
+  body{font-family:'Segoe UI',Arial,sans-serif;background:#eef0f3;margin:0;display:flex;min-height:100vh;align-items:center;justify-content:center;color:#111}
+  .card{background:#fff;border:1px solid #d8dadf;border-radius:12px;padding:28px 30px;width:340px;box-shadow:0 6px 24px rgba(0,0,0,.08)}
+  h1{font-size:18px;margin:0 0 4px}
+  .sub{font-size:12px;color:#666;margin:0 0 18px}
+  label{font-size:12px;color:#555;display:block;margin:10px 0 4px}
+  input{width:100%;box-sizing:border-box;font-size:14px;padding:9px 10px;border:1px solid #cfd2d7;border-radius:7px}
+  input:focus{outline:none;border-color:#1d4ed8;box-shadow:0 0 0 3px rgba(29,78,216,.15)}
+  button{width:100%;margin-top:16px;font-size:15px;font-weight:600;padding:10px;border:none;border-radius:7px;background:#16a34a;color:#fff;cursor:pointer}
+  button:hover{background:#128a3c}
+  #err{color:#c0392b;font-size:12.5px;margin-top:12px;min-height:16px}
+</style></head>
+<body>
+<div class="card">
+  <h1>Fahrzeugangebot – Anmeldung</h1>
+  <p class="sub">Autohaus Stieber GmbH · interner Zugang</p>
+  <label>E-Mail</label>
+  <input id="email" type="email" autocomplete="username" placeholder="vorname.nachname@autohaus-stieber.de">
+  <label>Passwort</label>
+  <input id="pw" type="password" autocomplete="current-password" placeholder="Passwort">
+  <button id="btn">Anmelden</button>
+  <div id="err"></div>
+</div>
+<script type="module">
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+const URL = "https://mnglpqeqmoxccqnztqez.supabase.co";
+const ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1uZ2xwcWVxbW94Y2Nxbnp0cWV6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkwMTc5NTMsImV4cCI6MjA5NDU5Mzk1M30.MFc6lVVhxQESoDbklUZvWX5iOdLNr7ZceMVYfIweDHE";
+const FN = URL + "/functions/v1/angebotsbogen";
+const sb = createClient(URL, ANON);
+const btn=document.getElementById("btn"), err=document.getElementById("err");
+async function showForm(token){
+  const r = await fetch(FN, { headers: { apikey: ANON, Authorization: "Bearer " + token } });
+  if(r.status===403){ err.textContent="Dein Konto ist nicht fuer dieses Formular freigeschaltet."; return; }
+  if(!r.ok){ err.textContent="Fehler beim Laden ("+r.status+")."; return; }
+  const html = await r.text();
+  document.open(); document.write(html); document.close();
+}
+async function login(){
+  err.textContent=""; btn.disabled=true; btn.textContent="Anmelden...";
+  try{
+    const res = await sb.auth.signInWithPassword({ email: document.getElementById("email").value.trim(), password: document.getElementById("pw").value });
+    if(res.error){ err.textContent="Anmeldung fehlgeschlagen: "+res.error.message; return; }
+    await showForm(res.data.session.access_token);
+  } catch(e){ err.textContent="Fehler: "+e.message; }
+  finally { btn.disabled=false; btn.textContent="Anmelden"; }
+}
+btn.addEventListener("click", login);
+document.getElementById("pw").addEventListener("keydown", e=>{ if(e.key==="Enter") login(); });
+// Bereits angemeldet? Direkt das Formular zeigen.
+sb.auth.getSession().then(({data})=>{ if(data.session) showForm(data.session.access_token); });
+</script>
+</body></html>
